@@ -1,0 +1,55 @@
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class SMPPServer1 {
+
+    private static final int PORT = 2775;
+
+    public void startServer() {
+        try {
+            ServerSocket serverSocket = new ServerSocket(PORT);
+            System.out.println("SMPP server started on port " + PORT);
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Accepted client connection");
+
+                // Handle client connection in a separate thread
+                Thread clientThread = new Thread(() -> handleClientConnection(clientSocket));
+                clientThread.start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void handleClientConnection(Socket clientSocket) {
+        try {
+            InputStream inputStream = clientSocket.getInputStream();
+            OutputStream outputStream = clientSocket.getOutputStream();
+
+            // Read and process SMPP messages from the client
+            while (true) {
+                // Read the incoming SMPP message from the client
+                // Process the received SMPP message
+                // Send the response back to the client
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        SMPPServer smppServer = new SMPPServer();
+        smppServer.startServer();
+    }
+}
