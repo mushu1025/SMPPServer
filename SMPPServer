@@ -1,0 +1,90 @@
+import org.jsmpp.PDUStringException;
+import org.jsmpp.SMPPConstant;
+import org.jsmpp.SMPPServerSession;
+import org.jsmpp.bean.AlertNotification;
+import org.jsmpp.bean.BindType;
+import org.jsmpp.bean.DeliverSm;
+import org.jsmpp.bean.NumberingPlanIndicator;
+import org.jsmpp.bean.TypeOfNumber;
+import org.jsmpp.extra.ProcessRequestException;
+import org.jsmpp.session.*;
+import org.jsmpp.util.MessageIDGenerator;
+import org.jsmpp.util.MessageId;
+import org.jsmpp.util.RandomMessageIDGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+
+public class SMPPServer {
+    private static final Logger logger = LoggerFactory.getLogger(SMPPServer.class);
+
+    private static final String SYSTEM_ID = "YOUR_SYSTEM_ID";
+    private static final String PASSWORD = "YOUR_PASSWORD";
+    private static final int PORT = 2775;
+
+    private MessageIDGenerator messageIDGenerator = new RandomMessageIDGenerator();
+
+    public void startServer() {
+        try {
+            SMPPServerSessionListener sessionListener = new SMPPServerSessionListener(PORT);
+            logger.info("SMPP server started on port " + PORT);
+
+            while (true) {
+                SMPPServerSession serverSession = sessionListener.accept();
+                logger.info("Accepted client connection");
+
+                BindRequest bindRequest = serverSession.waitForBind(5000);
+                if (bindRequest.getSystemId().equals(SYSTEM_ID) && bindRequest.getPassword().equals(PASSWORD)) {
+                    serverSession.sendResponse(bindRequest.createResponse(SMPPConstant.STAT_ESME_ROK));
+
+                    while (serverSession.isBound()) {
+                        try {
+                            PDU pdu = serverSession.receive(5000);
+
+                            if (pdu instanceof DeliverSm) {
+                                handleIncomingMessage(serverSession, (DeliverSm) pdu);
+                            } else if (pdu instanceof AlertNotification) {
+                                // Handle alert notification
+                            } else {
+                                // Handle other PDUs if necessary
+                            }
+                        } catch (IOException e) {
+                            logger.error("IOException occurred", e);
+                        } catch (OutOfMemoryError e) {
+                            logger.error("OutOfMemoryError occurred", e);
+                        } catch (PDUStringException e) {
+                            logger.error("PDUStringException occurred", e);
+                        } catch (ProcessRequestException e) {
+                            logger.error("ProcessRequestException occurred", e);
+                        }
+                    }
+                } else {
+                    serverSession.sendResponse(bindRequest.createResponse(SMPPConstant.STAT_ESME_RINVPASWD));
+                    serverSession.close();
+                    logger.error("Invalid system ID or password");
+                }
+            }
+        } catch (IOException e) {
+            logger.error("IOException occurred", e);
+        }
+    }
+
+    private void handleIncomingMessage(SMPPServerSession session, DeliverSm deliverSm) throws IOException {
+        String messageId = messageIDGenerator.newMessageId();
+        MessageId messageIdObj = MessageId.parseString(messageId);
+
+        // Process the incoming message
+        // You can access the message content with deliverSm.getShortMessage()
+
+        // Send a response to the client
+        DeliverSmResp deliverSmResp = new DeliverSmResp();
+        deliverSmResp.setMessageId(messageIdObj.getValue());
+        session.sendResponsePdu(deliverSmResp);
+    }
+
+    public static void main(String[] args) {
+        SMPPServer smppServer = new SMPPServer();
+        smppServer.startServer();
+    }
+}
