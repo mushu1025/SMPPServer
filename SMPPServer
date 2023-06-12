@@ -33,10 +33,19 @@ public class SMPPServer {
 
                     while (serverSession.getSessionState().isBound()) {
                         try {
-                            DeliverSm deliverSm = serverSession.receiveDeliverSm();
-                            handleIncomingMessage(serverSession, deliverSm);
-                        } catch (IOException | RecoverablePduException | UnrecoverablePduException | InterruptedException e) {
-                            logger.error("Error occurred", e);
+                            SMPPPacket receivedPacket = serverSession.waitForPacket();
+                            if (receivedPacket instanceof DeliverSm) {
+                                handleIncomingMessage(serverSession, (DeliverSm) receivedPacket);
+                            } else if (receivedPacket instanceof Unbind) {
+                                serverSession.sendResponse(receivedPacket.createResponse());
+                                serverSession.unbindAndClose();
+                                logger.info("Client unbound");
+                                break;
+                            } else {
+                                // Handle other packets if necessary
+                            }
+                        } catch (IOException | InvalidCommandLengthException | PDUException | ResponseTimeoutException e) {
+                            logger.error("Error occurred while waiting for packet", e);
                         }
                     }
                 } else {
@@ -45,7 +54,7 @@ public class SMPPServer {
                     logger.error("Invalid system ID or password");
                 }
             }
-        } catch (IOException | IllegalStateException e) {
+        } catch (IOException e) {
             logger.error("Error occurred", e);
         }
     }
