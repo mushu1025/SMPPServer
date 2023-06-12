@@ -1,4 +1,5 @@
 import org.jsmpp.bean.*;
+import org.jsmpp.extra.ProcessRequestException;
 import org.jsmpp.session.*;
 import org.jsmpp.util.MessageIDGenerator;
 import org.jsmpp.util.MessageId;
@@ -27,35 +28,39 @@ public class SMPPServer {
                 SMPPServerSession serverSession = sessionListener.accept();
                 logger.info("Accepted client connection");
 
-                SMPPPacket receivedPacket = serverSession.waitForPacket();
-                if (receivedPacket instanceof BindRequest) {
-                    BindRequest bindRequest = (BindRequest) receivedPacket;
-                    if (bindRequest.getSystemId().equals(SYSTEM_ID) && bindRequest.getPassword().equals(PASSWORD)) {
-                        serverSession.sendPacket(new BindResponse(bindRequest.getCommandId(),
-                                SMPPConstant.STAT_ESME_ROK, bindRequest.getSequenceNumber(), new TLV[0]));
+                BindRequest bindRequest = serverSession.waitForBind(5000);
+                if (bindRequest.getSystemId().equals(SYSTEM_ID) && bindRequest.getPassword().equals(PASSWORD)) {
+                    serverSession.sendResponse(bindRequest.createResponse(SMPPConstant.STAT_ESME_ROK));
 
-                        while (serverSession.getSessionState().isBound()) {
-                            SMPPPacket packet = serverSession.waitForPacket();
-                            if (packet instanceof DeliverSm) {
-                                handleIncomingMessage(serverSession, (DeliverSm) packet);
-                            } else if (packet instanceof Unbind) {
-                                serverSession.sendPacket(new UnbindResp(packet.getSequenceNumber()));
+                    while (serverSession.isBound()) {
+                        try {
+                            PDU pdu = serverSession.receive(5000);
+
+                            if (pdu instanceof DeliverSm) {
+                                handleIncomingMessage(serverSession, (DeliverSm) pdu);
+                            } else if (pdu instanceof Unbind) {
+                                serverSession.sendResponsePdu(pdu.createResponse());
                                 serverSession.unbindAndClose();
                                 logger.info("Client unbound");
                             } else {
-                                // Handle other packets if necessary
+                                // Handle other PDUs if necessary
                             }
+                        } catch (IOException e) {
+                            logger.error("IOException occurred", e);
+                        } catch (PDUStringException e) {
+                            logger.error("PDUStringException occurred", e);
+                        } catch (ProcessRequestException e) {
+                            logger.error("ProcessRequestException occurred", e);
                         }
-                    } else {
-                        serverSession.sendPacket(new BindResponse(bindRequest.getCommandId(),
-                                SMPPConstant.STAT_ESME_RINVPASWD, bindRequest.getSequenceNumber(), new TLV[0]));
-                        serverSession.unbindAndClose();
-                        logger.error("Invalid system ID or password");
                     }
+                } else {
+                    serverSession.sendResponse(bindRequest.createResponse(SMPPConstant.STAT_ESME_RINVPASWD));
+                    serverSession.unbindAndClose();
+                    logger.error("Invalid system ID or password");
                 }
             }
-        } catch (IOException | IllegalStateException e) {
-            logger.error("Error occurred", e);
+        } catch (IOException e) {
+            logger.error("IOException occurred", e);
         }
     }
 
@@ -69,7 +74,7 @@ public class SMPPServer {
         // Send a response to the client
         DeliverSmResp deliverSmResp = new DeliverSmResp();
         deliverSmResp.setMessageId(messageIdObj.getValue());
-        session.sendResponse(deliverSmResp);
+        session.sendResponsePdu(deliverSmResp);
     }
 
     public static void main(String[] args) {
