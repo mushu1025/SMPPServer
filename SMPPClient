@@ -1,46 +1,65 @@
-import org.jsmpp.session.*;
-import org.jsmpp.util.*;
+import org.jsmpp.bean.BindType;
+import org.jsmpp.bean.NumberingPlanIndicator;
+import org.jsmpp.bean.TypeOfNumber;
+import org.jsmpp.server.SMPPServer;
+import org.jsmpp.server.SessionStateListener;
+import org.jsmpp.server.SmppSession;
+import org.jsmpp.session.BindParameter;
+import org.jsmpp.session.SMPPServerSessionListener;
 
-public class SMPPClient {
+public class SMPPServer {
 
-    private static final String HOST = "127.0.0.1"; // 服务器主机名或 IP 地址
     private static final int PORT = 2775; // 服务器端口号
-    private static final String SYSTEM_ID = "your_system_id"; // 客户端的系统 ID
-    private static final String PASSWORD = "your_password"; // 客户端的密码
-    private static final String SYSTEM_TYPE = "your_system_type"; // 客户端的系统类型
-    private static final byte ADDRESS_TON = TypeOfNumber.UNKNOWN.value(); // 客户端的地址类型
-    private static final byte ADDRESS_NPI = NumberingPlanIndicator.UNKNOWN.value(); // 客户端的地址编号计划
+    private static final String SYSTEM_ID = "your_system_id"; // 服务器的系统 ID
+    private static final String PASSWORD = "your_password"; // 服务器的密码
+    private static final String SYSTEM_TYPE = "your_system_type"; // 服务器的系统类型
+    private static final TypeOfNumber ADDRESS_TON = TypeOfNumber.UNKNOWN; // 服务器的地址类型
+    private static final NumberingPlanIndicator ADDRESS_NPI = NumberingPlanIndicator.UNKNOWN; // 服务器的地址编号计划
 
-    public void bindToServer() {
+    public void startServer() {
         try {
-            TCPIPConnection connection = new TCPIPConnection(HOST, PORT);
-            SMPPSession session = new SMPPSession(connection);
+            SMPPServer smppServer = new SMPPServer(PORT);
+            smppServer.setSessionStateListener(new SessionStateListenerImpl());
+            smppServer.setSmppSessionHandler(new SmppSessionHandlerImpl());
 
-            BindRequest bindRequest = new BindTransceiver();
-            bindRequest.setSystemId(SYSTEM_ID);
-            bindRequest.setPassword(PASSWORD);
-            bindRequest.setSystemType(SYSTEM_TYPE);
-            bindRequest.setAddressTon(ADDRESS_TON);
-            bindRequest.setAddressNpi(ADDRESS_NPI);
+            SMPPServerSessionListener sessionListener = smppServer.getSessionListener();
+            sessionListener.setPort(PORT);
 
-            BindResponse bindResponse = session.bind(bindRequest);
+            BindParameter bindParameter = new BindParameter(
+                    BindType.BIND_TRX,
+                    SYSTEM_ID,
+                    PASSWORD,
+                    SYSTEM_TYPE,
+                    ADDRESS_TON,
+                    ADDRESS_NPI,
+                    ""
+            );
 
-            if (bindResponse.getCommandStatus() == SMPPConstant.STAT_ESME_ROK) {
-                System.out.println("Bind successful!");
-                // 执行其他操作...
-            } else {
-                System.err.println("Failed to bind. Error: " + bindResponse.getCommandStatus());
-                // 错误处理...
-            }
+            sessionListener.setBindParameter(bindParameter);
 
-            session.close();
+            smppServer.start();
+            System.out.println("SMPP server started on port " + PORT);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public static void main(String[] args) {
-        SMPPClient smppClient = new SMPPClient();
-        smppClient.bindToServer();
+        SMPPServer smppServer = new SMPPServer();
+        smppServer.startServer();
+    }
+
+    private static class SessionStateListenerImpl implements SessionStateListener {
+        @Override
+        public void onStateChange(SmppSession session, SessionState newState, SessionState oldState) {
+            System.out.println("Session state changed from " + oldState + " to " + newState);
+        }
+    }
+
+    private static class SmppSessionHandlerImpl extends org.jsmpp.session.ServerMessageReceiverListener {
+        @Override
+        public void onAcceptDeliverSm(org.jsmpp.session.SMPPServerSession session, org.jsmpp.bean.DeliverSm deliverSm) throws org.jsmpp.extra.ProcessRequestException {
+            // 处理传入的消息
+        }
     }
 }
