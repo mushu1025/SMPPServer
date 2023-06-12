@@ -1,8 +1,4 @@
 import org.jsmpp.bean.*;
-import org.jsmpp.extra.ProcessRequestException;
-import org.jsmpp.server.DefaultServerMessageReceiverListener;
-import org.jsmpp.server.MessageReceiverListener;
-import org.jsmpp.server.ServerMessageReceiverListener;
 import org.jsmpp.session.*;
 import org.jsmpp.util.MessageIDGenerator;
 import org.jsmpp.util.MessageId;
@@ -24,15 +20,7 @@ public class SMPPServer {
 
     public void startServer() {
         try {
-            MessageReceiverListener messageReceiverListener = new DefaultServerMessageReceiverListener() {
-                @Override
-                public void onAcceptSubmitSm(final SubmitSm submitSm, final SMPPServerSession source) throws ProcessRequestException {
-                    handleIncomingMessage(source, submitSm);
-                }
-            };
-
             SMPPServerSessionListener sessionListener = new SMPPServerSessionListener(PORT);
-            sessionListener.setMessageReceiverListener(messageReceiverListener);
             logger.info("SMPP server started on port " + PORT);
 
             while (true) {
@@ -47,8 +35,8 @@ public class SMPPServer {
                         try {
                             PDU pdu = serverSession.receive(5000);
 
-                            if (pdu instanceof EnquireLink) {
-                                // Handle enquire link
+                            if (pdu instanceof DeliverSm) {
+                                handleIncomingMessage(serverSession, (DeliverSm) pdu);
                             } else if (pdu instanceof Unbind) {
                                 serverSession.sendResponsePdu(pdu.createResponse());
                                 serverSession.unbindAndClose();
@@ -73,15 +61,17 @@ public class SMPPServer {
         }
     }
 
-    private void handleIncomingMessage(SMPPServerSession session, SubmitSm submitSm) throws IOException {
+    private void handleIncomingMessage(SMPPServerSession session, DeliverSm deliverSm) throws IOException {
         String messageId = messageIDGenerator.newMessageId();
         MessageId messageIdObj = MessageId.parseString(messageId);
 
         // Process the incoming message
-        // You can access the message content with submitSm.getShortMessage()
+        // You can access the message content with deliverSm.getShortMessage()
 
         // Send a response to the client
-        session.sendResponsePdu(submitSm.createResponse(SMPPConstant.STAT_ESME_ROK, messageIdObj.getValue()));
+        DeliverSmResp deliverSmResp = new DeliverSmResp();
+        deliverSmResp.setMessageId(messageIdObj.getValue());
+        session.sendResponsePdu(deliverSmResp);
     }
 
     public static void main(String[] args) {
