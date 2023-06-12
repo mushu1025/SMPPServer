@@ -1,5 +1,4 @@
 import org.jsmpp.bean.*;
-import org.jsmpp.extra.ProcessRequestException;
 import org.jsmpp.session.*;
 import org.jsmpp.util.MessageIDGenerator;
 import org.jsmpp.util.MessageId;
@@ -32,25 +31,12 @@ public class SMPPServer {
                 if (bindRequest.getSystemId().equals(SYSTEM_ID) && bindRequest.getPassword().equals(PASSWORD)) {
                     serverSession.sendResponse(bindRequest.createResponse(SMPPConstant.STAT_ESME_ROK));
 
-                    while (serverSession.isBound()) {
+                    while (serverSession.getSessionState().isBound()) {
                         try {
-                            PDU pdu = serverSession.receive(5000);
-
-                            if (pdu instanceof DeliverSm) {
-                                handleIncomingMessage(serverSession, (DeliverSm) pdu);
-                            } else if (pdu instanceof Unbind) {
-                                serverSession.sendResponsePdu(pdu.createResponse());
-                                serverSession.unbindAndClose();
-                                logger.info("Client unbound");
-                            } else {
-                                // Handle other PDUs if necessary
-                            }
-                        } catch (IOException e) {
-                            logger.error("IOException occurred", e);
-                        } catch (PDUStringException e) {
-                            logger.error("PDUStringException occurred", e);
-                        } catch (ProcessRequestException e) {
-                            logger.error("ProcessRequestException occurred", e);
+                            DeliverSm deliverSm = serverSession.receiveDeliverSm();
+                            handleIncomingMessage(serverSession, deliverSm);
+                        } catch (IOException | RecoverablePduException | UnrecoverablePduException | InterruptedException e) {
+                            logger.error("Error occurred", e);
                         }
                     }
                 } else {
@@ -59,8 +45,8 @@ public class SMPPServer {
                     logger.error("Invalid system ID or password");
                 }
             }
-        } catch (IOException e) {
-            logger.error("IOException occurred", e);
+        } catch (IOException | IllegalStateException e) {
+            logger.error("Error occurred", e);
         }
     }
 
