@@ -1,4 +1,5 @@
 import org.jsmpp.bean.*;
+import org.jsmpp.extra.ProcessRequestException;
 import org.jsmpp.session.*;
 import org.jsmpp.util.MessageIDGenerator;
 import org.jsmpp.util.MessageId;
@@ -20,7 +21,8 @@ public class SMPPServer {
 
     public void startServer() {
         try {
-            SMPPServerSessionListener sessionListener = new SMPPServerSessionListener(PORT);
+            SMPPServerSessionHandler sessionHandler = new SMPPServerSessionHandler();
+            SMPPServerSessionListener sessionListener = new SMPPServerSessionListener(PORT, sessionHandler);
             logger.info("SMPP server started on port " + PORT);
 
             while (true) {
@@ -48,6 +50,8 @@ public class SMPPServer {
                             logger.error("IOException occurred", e);
                         } catch (PDUStringException e) {
                             logger.error("PDUStringException occurred", e);
+                        } catch (ProcessRequestException e) {
+                            logger.error("ProcessRequestException occurred", e);
                         }
                     }
                 } else {
