@@ -21,8 +21,7 @@ public class SMPPServer {
 
     public void startServer() {
         try {
-            SMPPServerSessionHandler sessionHandler = new SMPPServerSessionHandler();
-            SMPPServerSessionListener sessionListener = new SMPPServerSessionListener(PORT, sessionHandler);
+            SMPPServerSessionListener sessionListener = new SMPPServerSessionListener(PORT);
             logger.info("SMPP server started on port " + PORT);
 
             while (true) {
