@@ -1,0 +1,46 @@
+import org.jsmpp.session.*;
+import org.jsmpp.util.*;
+
+public class SMPPClient {
+
+    private static final String HOST = "127.0.0.1"; // 服务器主机名或 IP 地址
+    private static final int PORT = 2775; // 服务器端口号
+    private static final String SYSTEM_ID = "your_system_id"; // 客户端的系统 ID
+    private static final String PASSWORD = "your_password"; // 客户端的密码
+    private static final String SYSTEM_TYPE = "your_system_type"; // 客户端的系统类型
+    private static final byte ADDRESS_TON = TypeOfNumber.UNKNOWN.value(); // 客户端的地址类型
+    private static final byte ADDRESS_NPI = NumberingPlanIndicator.UNKNOWN.value(); // 客户端的地址编号计划
+
+    public void bindToServer() {
+        try {
+            TCPIPConnection connection = new TCPIPConnection(HOST, PORT);
+            SMPPSession session = new SMPPSession(connection);
+
+            BindRequest bindRequest = new BindTransceiver();
+            bindRequest.setSystemId(SYSTEM_ID);
+            bindRequest.setPassword(PASSWORD);
+            bindRequest.setSystemType(SYSTEM_TYPE);
+            bindRequest.setAddressTon(ADDRESS_TON);
+            bindRequest.setAddressNpi(ADDRESS_NPI);
+
+            BindResponse bindResponse = session.bind(bindRequest);
+
+            if (bindResponse.getCommandStatus() == SMPPConstant.STAT_ESME_ROK) {
+                System.out.println("Bind successful!");
+                // 执行其他操作...
+            } else {
+                System.err.println("Failed to bind. Error: " + bindResponse.getCommandStatus());
+                // 错误处理...
+            }
+
+            session.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        SMPPClient smppClient = new SMPPClient();
+        smppClient.bindToServer();
+    }
+}
