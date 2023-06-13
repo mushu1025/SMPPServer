@@ -1,55 +1,97 @@
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
+import org.jsmpp.server.DefaultSmppServer;
+import org.jsmpp.server.SmppServerConfiguration;
+import org.jsmpp.server.SmppServerSession;
+import org.jsmpp.session.*;
+import org.jsmpp.util.MessageIDGenerator;
+import org.jsmpp.util.MessageId;
 
-public class SMPPServer1 {
+public class SMPPServer {
 
     private static final int PORT = 2775;
+    private static final String SYSTEM_ID = "your_system_id";
+    private static final String PASSWORD = "your_password";
+
+    private SMPPServerSessionListener sessionListener;
 
     public void startServer() {
         try {
-            ServerSocket serverSocket = new ServerSocket(PORT);
+            SmppServerConfiguration serverConfig = new SmppServerConfiguration();
+            serverConfig.setPort(PORT);
+
+            DefaultSmppServer smppServer = new DefaultSmppServer(serverConfig);
+            sessionListener = smppServer.getSessionHandler();
+
+            BindParameter bindParameter = new BindParameter(
+                    BindType.BIND_TRX,
+                    SYSTEM_ID,
+                    PASSWORD,
+                    "",
+                    TypeOfNumber.UNKNOWN,
+                    NumberingPlanIndicator.UNKNOWN,
+                    ""
+            );
+            sessionListener.setDefaultBindType(bindParameter.getBindType());
+            sessionListener.setDefaultSystemId(bindParameter.getSystemId());
+            sessionListener.setDefaultPassword(bindParameter.getPassword());
+            sessionListener.setDefaultAddressRange(bindParameter.getAddressRange());
+
+            sessionListener.setMessageReceiverListener(new ServerMessageReceiverListenerImpl());
+
+            smppServer.start();
             System.out.println("SMPP server started on port " + PORT);
-
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Accepted client connection");
-
-                // Handle client connection in a separate thread
-                Thread clientThread = new Thread(() -> handleClientConnection(clientSocket));
-                clientThread.start();
-            }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void handleClientConnection(Socket clientSocket) {
-        try {
-            InputStream inputStream = clientSocket.getInputStream();
-            OutputStream outputStream = clientSocket.getOutputStream();
-
-            // Read and process SMPP messages from the client
-            while (true) {
-                // Read the incoming SMPP message from the client
-                // Process the received SMPP message
-                // Send the response back to the client
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                clientSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+    public void stopServer() {
+        if (sessionListener != null) {
+            sessionListener.destroy();
         }
     }
 
     public static void main(String[] args) {
         SMPPServer smppServer = new SMPPServer();
         smppServer.startServer();
+    }
+
+    private static class ServerMessageReceiverListenerImpl implements MessageReceiverListener {
+
+        private MessageIDGenerator messageIdGenerator;
+
+        public ServerMessageReceiverListenerImpl() {
+            messageIdGenerator = new MessageIDGenerator();
+        }
+
+        @Override
+        public DataSmResult onAcceptDataSm(DataSm dataSm, Session session) throws ProcessRequestException {
+            return null;
+        }
+
+        @Override
+        public void onAcceptAlertNotification(AlertNotification alertNotification, Session session) {
+
+        }
+
+        @Override
+        public SubmitMultiResult onAcceptSubmitMulti(SubmitMulti submitMulti, Session session) throws ProcessRequestException {
+            return null;
+        }
+
+        @Override
+        public QuerySmResult onAcceptQuerySm(QuerySm querySm, Session session) throws ProcessRequestException {
+            return null;
+        }
+
+        @Override
+        public MessageId onAcceptSubmitSm(SubmitSm submitSm, SMPPServerSession session) throws ProcessRequestException {
+            System.out.println("Received message: " + submitSm.getShortMessage());
+            return messageIdGenerator.newMessageId();
+        }
+
+        @Override
+        public SubmitSmResult onAcceptSubmitSm(SubmitSm submitSm, SMPPServerSession source) throws ProcessRequestException {
+            return null;
+        }
     }
 }
