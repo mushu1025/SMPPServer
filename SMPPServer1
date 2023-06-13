@@ -1,9 +1,8 @@
-import org.jsmpp.server.DefaultSmppServer;
-import org.jsmpp.server.SmppServerConfiguration;
-import org.jsmpp.server.SmppServerSession;
-import org.jsmpp.session.*;
-import org.jsmpp.util.MessageIDGenerator;
-import org.jsmpp.util.MessageId;
+import com.cloudhopper.smpp.SmppServer;
+import com.cloudhopper.smpp.SmppServerConfiguration;
+import com.cloudhopper.smpp.SmppServerHandler;
+import com.cloudhopper.smpp.SmppSession;
+import com.cloudhopper.smpp.SmppSessionConfiguration;
 
 public class SMPPServer {
 
@@ -11,32 +10,14 @@ public class SMPPServer {
     private static final String SYSTEM_ID = "your_system_id";
     private static final String PASSWORD = "your_password";
 
-    private SMPPServerSessionListener sessionListener;
-
     public void startServer() {
         try {
             SmppServerConfiguration serverConfig = new SmppServerConfiguration();
             serverConfig.setPort(PORT);
 
-            DefaultSmppServer smppServer = new DefaultSmppServer(serverConfig);
-            sessionListener = smppServer.getSessionHandler();
+            SmppServerHandler serverHandler = new MySmppServerHandler();
 
-            BindParameter bindParameter = new BindParameter(
-                    BindType.BIND_TRX,
-                    SYSTEM_ID,
-                    PASSWORD,
-                    "",
-                    TypeOfNumber.UNKNOWN,
-                    NumberingPlanIndicator.UNKNOWN,
-                    ""
-            );
-            sessionListener.setDefaultBindType(bindParameter.getBindType());
-            sessionListener.setDefaultSystemId(bindParameter.getSystemId());
-            sessionListener.setDefaultPassword(bindParameter.getPassword());
-            sessionListener.setDefaultAddressRange(bindParameter.getAddressRange());
-
-            sessionListener.setMessageReceiverListener(new ServerMessageReceiverListenerImpl());
-
+            SmppServer smppServer = new SmppServer(serverConfig, serverHandler);
             smppServer.start();
             System.out.println("SMPP server started on port " + PORT);
         } catch (Exception e) {
@@ -45,9 +26,7 @@ public class SMPPServer {
     }
 
     public void stopServer() {
-        if (sessionListener != null) {
-            sessionListener.destroy();
-        }
+        // Implement the necessary code to stop the server
     }
 
     public static void main(String[] args) {
@@ -55,43 +34,27 @@ public class SMPPServer {
         smppServer.startServer();
     }
 
-    private static class ServerMessageReceiverListenerImpl implements MessageReceiverListener {
+    private static class MySmppServerHandler implements SmppServerHandler {
 
-        private MessageIDGenerator messageIdGenerator;
-
-        public ServerMessageReceiverListenerImpl() {
-            messageIdGenerator = new MessageIDGenerator();
+        @Override
+        public void sessionBindRequested(Long sessionId, SmppSessionConfiguration sessionConfiguration, boolean isNewSession) {
+            if (sessionConfiguration.getSystemId().equals(SYSTEM_ID) && sessionConfiguration.getPassword().equals(PASSWORD)) {
+                // Accept the bind request
+                System.out.println("Accepted bind request for session: " + sessionId);
+            } else {
+                // Reject the bind request
+                System.out.println("Rejected bind request for session: " + sessionId);
+            }
         }
 
         @Override
-        public DataSmResult onAcceptDataSm(DataSm dataSm, Session session) throws ProcessRequestException {
-            return null;
-        }
-
-        @Override
-        public void onAcceptAlertNotification(AlertNotification alertNotification, Session session) {
+        public void sessionCreated(Long sessionId, SmppSession session, BaseBindResp preparedBindResponse) {
 
         }
 
         @Override
-        public SubmitMultiResult onAcceptSubmitMulti(SubmitMulti submitMulti, Session session) throws ProcessRequestException {
-            return null;
-        }
+        public void sessionDestroyed(Long sessionId, SmppSession session) {
 
-        @Override
-        public QuerySmResult onAcceptQuerySm(QuerySm querySm, Session session) throws ProcessRequestException {
-            return null;
-        }
-
-        @Override
-        public MessageId onAcceptSubmitSm(SubmitSm submitSm, SMPPServerSession session) throws ProcessRequestException {
-            System.out.println("Received message: " + submitSm.getShortMessage());
-            return messageIdGenerator.newMessageId();
-        }
-
-        @Override
-        public SubmitSmResult onAcceptSubmitSm(SubmitSm submitSm, SMPPServerSession source) throws ProcessRequestException {
-            return null;
         }
     }
 }
