@@ -1,1 +1,98 @@
-keytool -importkeystore -srckeystore your_keystore.jks -destkeystore your_keystore.p12 -srcstoretype JKS -deststoretype PKCS12
+import org.smpp.ServerPDUEvent;
+import org.smpp.ServerPDUEventListener;
+import org.smpp.Session;
+import org.smpp.SmppObject;
+import org.smpp.pdu.BindRequest;
+import org.smpp.pdu.BindResponse;
+import org.smpp.pdu.PDU;
+import org.smpp.pdu.PDUException;
+import org.smpp.pdu.Request;
+import org.smpp.pdu.Response;
+import org.smpp.util.Queue;
+import org.smpp.util.QueueException;
+
+public class SMPPServerExample {
+
+    private static final int PORT = 2775;
+
+    public static void main(String[] args) {
+        try {
+            // 创建 SMPP 服务端 Session
+            Session session = new Session(PORT);
+            session.setPDUProcessor(new YourPDUProcessor());
+            session.setPDUEventListener(new YourPDUEventListener());
+
+            // 启动 SMPP 服务端 Session
+            session.start();
+
+            // 等待服务端 Session 停止命令
+            while (session.getSessionState() != Session.STATE_CLOSED) {
+                Thread.sleep(1000);
+            }
+
+            // 停止 SMPP 服务端 Session
+            session.stop();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static class YourPDUProcessor extends SmppObject implements ServerPDUEventListener {
+
+        @Override
+        public void handleEvent(ServerPDUEvent event) {
+            PDU pdu = event.getPDU();
+            // 处理接收到的 PDU
+            try {
+                Response response = pdu.getResponse();
+                if (response != null) {
+                    // 发送响应
+                    // session.respond(response);
+                } else {
+                    Request request = (Request) pdu;
+                    // 判断是否是绑定请求
+                    if (request instanceof BindRequest) {
+                        BindRequest bindRequest = (BindRequest) request;
+                        // 处理绑定请求
+                        // ...
+                        // 发送绑定响应
+                        BindResponse bindResponse = bindRequest.createResponse();
+                        // 设置绑定响应参数
+                        // ...
+                        // session.respond(bindResponse);
+                    } else {
+                        // 处理其他类型的请求
+                        // ...
+                    }
+                }
+            } catch (PDUException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static class YourPDUEventListener extends SmppObject implements Runnable {
+
+        private Queue eventQueue = new Queue();
+
+        public void handleEvent(ServerPDUEvent event) {
+            try {
+                eventQueue.enquiry(event);
+            } catch (QueueException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public void run() {
+            for (;;) {
+                try {
+                    ServerPDUEvent event = (ServerPDUEvent) eventQueue.dequiry();
+                    handleEvent(event);
+                } catch (QueueException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+}
