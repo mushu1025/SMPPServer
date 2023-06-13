@@ -1,8 +1,8 @@
-import com.cloudhopper.smpp.SmppServer;
-import com.cloudhopper.smpp.SmppServerConfiguration;
-import com.cloudhopper.smpp.SmppServerHandler;
-import com.cloudhopper.smpp.SmppSession;
+import com.cloudhopper.commons.util.windowing.WindowFuture;
+import com.cloudhopper.smpp.SmppBindType;
 import com.cloudhopper.smpp.SmppSessionConfiguration;
+import com.cloudhopper.smpp.impl.DefaultSmppServer;
+import com.cloudhopper.smpp.type.Address;
 
 public class SMPPServer {
 
@@ -12,13 +12,18 @@ public class SMPPServer {
 
     public void startServer() {
         try {
-            SmppServerConfiguration serverConfig = new SmppServerConfiguration();
-            serverConfig.setPort(PORT);
+            DefaultSmppServer smppServer = new DefaultSmppServer();
+            smppServer.setPort(PORT);
 
-            SmppServerHandler serverHandler = new MySmppServerHandler();
+            SmppSessionConfiguration sessionConfig = new SmppSessionConfiguration();
+            sessionConfig.setSystemId(SYSTEM_ID);
+            sessionConfig.setPassword(PASSWORD);
+            sessionConfig.setType(SmppBindType.TRANSCEIVER);
+            sessionConfig.setAddressRange(new Address());
 
-            SmppServer smppServer = new SmppServer(serverConfig, serverHandler);
+            smppServer.setDefaultSessionConfig(sessionConfig);
             smppServer.start();
+            
             System.out.println("SMPP server started on port " + PORT);
         } catch (Exception e) {
             e.printStackTrace();
@@ -32,29 +37,5 @@ public class SMPPServer {
     public static void main(String[] args) {
         SMPPServer smppServer = new SMPPServer();
         smppServer.startServer();
-    }
-
-    private static class MySmppServerHandler implements SmppServerHandler {
-
-        @Override
-        public void sessionBindRequested(Long sessionId, SmppSessionConfiguration sessionConfiguration) {
-            if (sessionConfiguration.getSystemId().equals(SYSTEM_ID) && sessionConfiguration.getPassword().equals(PASSWORD)) {
-                // Accept the bind request
-                System.out.println("Accepted bind request for session: " + sessionId);
-            } else {
-                // Reject the bind request
-                System.out.println("Rejected bind request for session: " + sessionId);
-            }
-        }
-
-        @Override
-        public void sessionCreated(Long sessionId, SmppSession session) {
-
-        }
-
-        @Override
-        public void sessionDestroyed(Long sessionId, SmppSession session) {
-
-        }
     }
 }
