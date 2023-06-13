@@ -1,15 +1,12 @@
-import org.smpp.ServerPDUEvent;
-import org.smpp.ServerPDUEventListener;
-import org.smpp.Session;
-import org.smpp.SmppObject;
-import org.smpp.pdu.BindRequest;
-import org.smpp.pdu.BindResponse;
-import org.smpp.pdu.PDU;
-import org.smpp.pdu.PDUException;
-import org.smpp.pdu.Request;
-import org.smpp.pdu.Response;
-import org.smpp.util.Queue;
-import org.smpp.util.QueueException;
+import org.opensmpp.smpp.Connection;
+import org.opensmpp.smpp.SmppObject;
+import org.opensmpp.smpp.event.ServerMessageReceivedEvent;
+import org.opensmpp.smpp.event.ServerMessageReceivedListener;
+import org.opensmpp.smpp.event.ServerMessageReceivedListenerAdaptor;
+import org.opensmpp.smpp.pdu.BindRequest;
+import org.opensmpp.smpp.pdu.BindResponse;
+import org.opensmpp.smpp.pdu.PDU;
+import org.opensmpp.smpp.util.ByteBuffer;
 
 public class SMPPServerExample {
 
@@ -17,81 +14,50 @@ public class SMPPServerExample {
 
     public static void main(String[] args) {
         try {
-            // 创建 SMPP 服务端 Session
-            Session session = new Session(PORT);
-            session.setPDUProcessor(new YourPDUProcessor());
-            session.setPDUEventListener(new YourPDUEventListener());
+            // 创建 SMPP 服务端连接
+            Connection serverConnection = new Connection(PORT);
+            serverConnection.setServerMessageReceivedListener(new ServerMessageListener());
 
-            // 启动 SMPP 服务端 Session
-            session.start();
+            // 启动 SMPP 服务端连接
+            serverConnection.start();
 
-            // 等待服务端 Session 停止命令
-            while (session.getSessionState() != Session.STATE_CLOSED) {
+            // 等待服务端连接停止命令
+            while (serverConnection.isActive()) {
                 Thread.sleep(1000);
             }
 
-            // 停止 SMPP 服务端 Session
-            session.stop();
+            // 停止 SMPP 服务端连接
+            serverConnection.stop();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static class YourPDUProcessor extends SmppObject implements ServerPDUEventListener {
+    private static class ServerMessageListener extends ServerMessageReceivedListenerAdaptor {
 
         @Override
-        public void handleEvent(ServerPDUEvent event) {
+        public PDU received(ServerMessageReceivedEvent event) {
             PDU pdu = event.getPDU();
-            // 处理接收到的 PDU
-            try {
-                Response response = pdu.getResponse();
-                if (response != null) {
-                    // 发送响应
-                    // session.respond(response);
+            if (pdu.isRequest()) {
+                // 处理请求
+                if (pdu instanceof BindRequest) {
+                    BindRequest bindRequest = (BindRequest) pdu;
+                    // 处理绑定请求
+                    // ...
+                    // 创建绑定响应
+                    BindResponse bindResponse = new BindResponse(bindRequest);
+                    // 设置绑定响应参数
+                    // ...
+                    return bindResponse;
                 } else {
-                    Request request = (Request) pdu;
-                    // 判断是否是绑定请求
-                    if (request instanceof BindRequest) {
-                        BindRequest bindRequest = (BindRequest) request;
-                        // 处理绑定请求
-                        // ...
-                        // 发送绑定响应
-                        BindResponse bindResponse = bindRequest.createResponse();
-                        // 设置绑定响应参数
-                        // ...
-                        // session.respond(bindResponse);
-                    } else {
-                        // 处理其他类型的请求
-                        // ...
-                    }
+                    // 处理其他请求
+                    // ...
                 }
-            } catch (PDUException e) {
-                e.printStackTrace();
+            } else {
+                // 处理响应
+                // ...
             }
-        }
-    }
-
-    private static class YourPDUEventListener extends SmppObject implements Runnable {
-
-        private Queue eventQueue = new Queue();
-
-        public void handleEvent(ServerPDUEvent event) {
-            try {
-                eventQueue.enquiry(event);
-            } catch (QueueException e) {
-                e.printStackTrace();
-            }
-        }
-
-        public void run() {
-            for (;;) {
-                try {
-                    ServerPDUEvent event = (ServerPDUEvent) eventQueue.dequiry();
-                    handleEvent(event);
-                } catch (QueueException e) {
-                    e.printStackTrace();
-                }
-            }
+            return null;
         }
     }
 
