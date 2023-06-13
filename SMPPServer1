@@ -1,7 +1,8 @@
-import com.cloudhopper.commons.util.windowing.WindowFuture;
 import com.cloudhopper.smpp.SmppBindType;
 import com.cloudhopper.smpp.SmppSessionConfiguration;
 import com.cloudhopper.smpp.impl.DefaultSmppServer;
+import com.cloudhopper.smpp.impl.DefaultSmppServerHandler;
+import com.cloudhopper.smpp.impl.DefaultSmppServerSessionFactory;
 import com.cloudhopper.smpp.type.Address;
 
 public class SMPPServer {
@@ -12,8 +13,9 @@ public class SMPPServer {
 
     public void startServer() {
         try {
-            DefaultSmppServer smppServer = new DefaultSmppServer();
-            smppServer.setPort(PORT);
+            DefaultSmppServerHandler serverHandler = new DefaultSmppServerHandler();
+            DefaultSmppServerSessionFactory sessionFactory = new DefaultSmppServerSessionFactory();
+            sessionFactory.setHandler(serverHandler);
 
             SmppSessionConfiguration sessionConfig = new SmppSessionConfiguration();
             sessionConfig.setSystemId(SYSTEM_ID);
@@ -21,9 +23,10 @@ public class SMPPServer {
             sessionConfig.setType(SmppBindType.TRANSCEIVER);
             sessionConfig.setAddressRange(new Address());
 
-            smppServer.setDefaultSessionConfig(sessionConfig);
+            DefaultSmppServer smppServer = new DefaultSmppServer(sessionConfig, sessionFactory);
+            smppServer.setPort(PORT);
             smppServer.start();
-            
+
             System.out.println("SMPP server started on port " + PORT);
         } catch (Exception e) {
             e.printStackTrace();
