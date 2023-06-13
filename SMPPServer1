@@ -37,7 +37,7 @@ public class SMPPServer {
     private static class MySmppServerHandler implements SmppServerHandler {
 
         @Override
-        public void sessionBindRequested(Long sessionId, SmppSessionConfiguration sessionConfiguration, boolean isNewSession) {
+        public void sessionBindRequested(Long sessionId, SmppSessionConfiguration sessionConfiguration) {
             if (sessionConfiguration.getSystemId().equals(SYSTEM_ID) && sessionConfiguration.getPassword().equals(PASSWORD)) {
                 // Accept the bind request
                 System.out.println("Accepted bind request for session: " + sessionId);
@@ -48,7 +48,7 @@ public class SMPPServer {
         }
 
         @Override
-        public void sessionCreated(Long sessionId, SmppSession session, BaseBindResp preparedBindResponse) {
+        public void sessionCreated(Long sessionId, SmppSession session) {
 
         }
 
