@@ -1,64 +1,23 @@
-import org.opensmpp.smpp.Connection;
-import org.opensmpp.smpp.SmppObject;
-import org.opensmpp.smpp.event.ServerMessageReceivedEvent;
-import org.opensmpp.smpp.event.ServerMessageReceivedListener;
-import org.opensmpp.smpp.event.ServerMessageReceivedListenerAdaptor;
-import org.opensmpp.smpp.pdu.BindRequest;
-import org.opensmpp.smpp.pdu.BindResponse;
-import org.opensmpp.smpp.pdu.PDU;
-import org.opensmpp.smpp.util.ByteBuffer;
+import requests
 
-public class SMPPServerExample {
-
-    private static final int PORT = 2775;
-
-    public static void main(String[] args) {
-        try {
-            // 创建 SMPP 服务端连接
-            Connection serverConnection = new Connection(PORT);
-            serverConnection.setServerMessageReceivedListener(new ServerMessageListener());
-
-            // 启动 SMPP 服务端连接
-            serverConnection.start();
-
-            // 等待服务端连接停止命令
-            while (serverConnection.isActive()) {
-                Thread.sleep(1000);
-            }
-
-            // 停止 SMPP 服务端连接
-            serverConnection.stop();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+def lambda_handler(event, context):
+    url = "https://api.example.com"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer YOUR_TOKEN"
     }
 
-    private static class ServerMessageListener extends ServerMessageReceivedListenerAdaptor {
-
-        @Override
-        public PDU received(ServerMessageReceivedEvent event) {
-            PDU pdu = event.getPDU();
-            if (pdu.isRequest()) {
-                // 处理请求
-                if (pdu instanceof BindRequest) {
-                    BindRequest bindRequest = (BindRequest) pdu;
-                    // 处理绑定请求
-                    // ...
-                    // 创建绑定响应
-                    BindResponse bindResponse = new BindResponse(bindRequest);
-                    // 设置绑定响应参数
-                    // ...
-                    return bindResponse;
-                } else {
-                    // 处理其他请求
-                    // ...
-                }
-            } else {
-                // 处理响应
-                // ...
-            }
-            return null;
+    try:
+        response = requests.get(url, headers=headers)
+        data = response.text
+        print(data)
+        return {
+            "statusCode": response.status_code,
+            "body": data
         }
-    }
-
-}
+    except requests.exceptions.RequestException as e:
+        print("Error:", e)
+        return {
+            "statusCode": 500,
+            "body": "An error occurred"
+        }
