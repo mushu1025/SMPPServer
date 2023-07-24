@@ -1,33 +1,36 @@
 <dependencies>
+    <!-- JUnit for testing -->
     <dependency>
-        <groupId>org.jsmpp</groupId>
-        <artifactId>jsmpp</artifactId>
-        <version>2.3.8</version>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.13.2</version> <!-- or the latest version -->
+        <scope>test</scope>
     </dependency>
+
+    <!-- Mockito for mocking -->
     <dependency>
-        <groupId>com.cloudhopper</groupId>
-        <artifactId>ch-commons</artifactId>
-        <version>3.0.1</version>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>3.9.0</version> <!-- or the latest version -->
+        <scope>test</scope>
     </dependency>
+
+    <!-- PowerMock for extending Mockito and mocking static methods -->
     <dependency>
-        <groupId>com.cloudhopper</groupId>
-        <artifactId>ch-smpp</artifactId>
-        <version>3.0.1</version>
+        <groupId>org.powermock</groupId>
+        <artifactId>powermock-module-junit4</artifactId>
+        <version>2.0.9</version> <!-- or the latest version -->
+        <scope>test</scope>
     </dependency>
+
+    <!-- PowerMockito for using PowerMock with Mockito -->
     <dependency>
-        <groupId>com.cloudhopper</groupId>
-        <artifactId>ch-logging</artifactId>
-        <version>3.0.1</version>
+        <groupId>org.powermock</groupId>
+        <artifactId>powermock-api-mockito2</artifactId>
+        <version>2.0.9</version> <!-- or the latest version -->
+        <scope>test</scope>
     </dependency>
-    <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>1.7.32</version>
-    </dependency>
-    <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-simple</artifactId>
-        <version>1.7.32</version>
-        <scope>runtime</scope>
-    </dependency>
+
+    <!-- Other dependencies for your project -->
+    <!-- ... -->
 </dependencies>
