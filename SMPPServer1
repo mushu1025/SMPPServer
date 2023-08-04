@@ -1,23 +1,73 @@
-import requests
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-def lambda_handler(event, context):
-    url = "https://api.example.com"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer YOUR_TOKEN"
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+public class JsonToMap {
+    public static void main(String[] args) throws IOException {
+        String jsonString = "{\"name\":\"John\",\"age\":30,\"address\":{\"city\":\"New York\",\"zip\":\"10001\"},\"languages\":[\"Java\",\"Python\",\"JavaScript\"]}";
+
+        // 创建ObjectMapper实例
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        // 将JSON字符串转换为JsonNode (JSON object)
+        JsonNode jsonNode = objectMapper.readTree(jsonString);
+
+        // 将JsonNode转换为Map
+        Map<String, Object> map = jsonNodeToMap(jsonNode);
+
+        // 打印Map
+        System.out.println(map);
     }
 
-    try:
-        response = requests.get(url, headers=headers)
-        data = response.text
-        print(data)
-        return {
-            "statusCode": response.status_code,
-            "body": data
+    private static Map<String, Object> jsonNodeToMap(JsonNode jsonNode) {
+        Map<String, Object> map = new HashMap<>();
+
+        Iterator<Map.Entry<String, JsonNode>> fields = jsonNode.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> entry = fields.next();
+            String key = entry.getKey();
+            JsonNode value = entry.getValue();
+
+            if (value.isObject()) {
+                // 如果值是JSON对象，递归处理
+                map.put(key, jsonNodeToMap(value));
+            } else if (value.isArray()) {
+                // 如果值是JSON数组，递归处理
+                map.put(key, jsonNodeToList(value));
+            } else if (value.isNumber()) {
+                // 如果值是数字，将其转换为对应的Java基本数据类型
+                map.put(key, value.numberValue());
+            } else if (value.isBoolean()) {
+                // 如果值是布尔类型，将其转换为对应的Java布尔类型
+                map.put(key, value.booleanValue());
+            } else {
+                // 如果值是字符串或其他类型，直接取其文本值
+                map.put(key, value.asText());
+            }
         }
-    except requests.exceptions.RequestException as e:
-        print("Error:", e)
-        return {
-            "statusCode": 500,
-            "body": "An error occurred"
+
+        return map;
+    }
+
+    private static List<Object> jsonNodeToList(JsonNode jsonNode) {
+        List<Object> list = new ArrayList<>();
+        for (JsonNode element : jsonNode) {
+            if (element.isObject()) {
+                list.add(jsonNodeToMap(element));
+            } else if (element.isArray()) {
+                list.add(jsonNodeToList(element));
+            } else if (element.isNumber()) {
+                list.add(element.numberValue());
+            } else if (element.isBoolean()) {
+                list.add(element.booleanValue());
+            } else {
+                list.add(element.asText());
+            }
         }
+        return list;
+    }
+}
