@@ -4,14 +4,16 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Base64;
 
-public class GraphApiROPCExample {
+public class GraphROPCExample {
 
     public static void main(String[] args) throws Exception {
-        String clientId = "your-client-id";
-        String clientSecret = "your-client-secret";
-        String username = "user-username";
-        String password = "user-password";
-        String graphApiEndpoint = "https://graph.microsoft.com/v1.0/me";
+        String clientId = "<YOUR_CLIENT_ID>";
+        String clientSecret = "<YOUR_CLIENT_SECRET>";
+        String tenantId = "<YOUR_TENANT_ID>";
+        String userEmail = "<USER_EMAIL>";
+        String userPassword = "<USER_PASSWORD>";
+
+        String graphApiEndpoint = "https://graph.microsoft.com/v1.0/me/mailFolders/Inbox/messages";
 
         // Encode client credentials for Basic Authentication
         String credentials = clientId + ":" + clientSecret;
@@ -19,10 +21,10 @@ public class GraphApiROPCExample {
 
         // Create ROPC request payload
         String payload = "grant_type=password&scope=https://graph.microsoft.com/.default&username="
-                + username + "&password=" + password;
+                + userEmail + "&password=" + userPassword;
 
         // Send POST request to get access token
-        URL tokenUrl = new URL("https://login.microsoftonline.com/{tenant-id}/oauth2/v2.0/token");
+        URL tokenUrl = new URL("https://login.microsoftonline.com/" + tenantId + "/oauth2/v2.0/token");
         HttpURLConnection connection = (HttpURLConnection) tokenUrl.openConnection();
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Authorization", "Basic " + encodedCredentials);
