@@ -1,0 +1,52 @@
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+
+public class GraphApiROPCWithProxyExample {
+
+    public static void main(String[] args) throws Exception {
+        String clientId = "your-client-id";
+        String clientSecret = "your-client-secret";
+        String tenantId = "your-tenant-id";
+        String userEmail = "user-username";
+        String userPassword = "user-password";
+        String graphApiEndpoint = "https://graph.microsoft.com/v1.0/me/mailFolders/Inbox/messages";
+
+        String proxyHost = "proxy-hostname";
+        int proxyPort = 8080;
+
+        // Create ROPC request payload
+        String payload = "grant_type=password&scope=https://graph.microsoft.com/.default&username="
+                + userEmail + "&password=" + userPassword;
+
+        // Set up proxy
+        HttpHost proxy = new HttpHost(proxyHost, proxyPort);
+
+        // Create HttpClient with proxy
+        HttpClient httpClient = HttpClients.custom().setProxy(proxy).build();
+
+        // Send POST request to get access token
+        HttpPost tokenRequest = new HttpPost("https://login.microsoftonline.com/" + tenantId + "/oauth2/v2.0/token");
+        tokenRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString((clientId + ":" + clientSecret).getBytes()));
+        tokenRequest.setHeader("Content-Type", "application/x-www-form-urlencoded");
+        tokenRequest.setEntity(new StringEntity(payload));
+
+        HttpResponse tokenResponse = httpClient.execute(tokenRequest);
+        HttpEntity tokenEntity = tokenResponse.getEntity();
+        String accessToken = EntityUtils.toString(tokenEntity);
+
+        // Use the obtained access token to make Graph API request
+        HttpGet graphApiRequest = new HttpGet(graphApiEndpoint);
+        graphApiRequest.setHeader("Authorization", "Bearer " + accessToken);
+
+        HttpResponse graphApiResponse = httpClient.execute(graphApiRequest);
+        HttpEntity graphApiEntity = graphApiResponse.getEntity();
+        String graphApiResponseBody = EntityUtils.toString(graphApiEntity);
+
+        System.out.println(graphApiResponseBody);
+    }
+}
