@@ -1,0 +1,57 @@
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Base64;
+
+public class GraphApiROPCExample {
+
+    public static void main(String[] args) throws Exception {
+        String clientId = "your-client-id";
+        String clientSecret = "your-client-secret";
+        String username = "user-username";
+        String password = "user-password";
+        String graphApiEndpoint = "https://graph.microsoft.com/v1.0/me";
+
+        // Encode client credentials for Basic Authentication
+        String credentials = clientId + ":" + clientSecret;
+        String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes());
+
+        // Create ROPC request payload
+        String payload = "grant_type=password&scope=https://graph.microsoft.com/.default&username="
+                + username + "&password=" + password;
+
+        // Send POST request to get access token
+        URL tokenUrl = new URL("https://login.microsoftonline.com/{tenant-id}/oauth2/v2.0/token");
+        HttpURLConnection connection = (HttpURLConnection) tokenUrl.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Authorization", "Basic " + encodedCredentials);
+        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        connection.setDoOutput(true);
+
+        connection.getOutputStream().write(payload.getBytes());
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        reader.close();
+
+        String accessToken = response.toString(); // Parse access token from JSON response
+
+        // Use the obtained access token to make Graph API request
+        URL graphApiUrl = new URL(graphApiEndpoint);
+        HttpURLConnection graphApiConnection = (HttpURLConnection) graphApiUrl.openConnection();
+        graphApiConnection.setRequestMethod("GET");
+        graphApiConnection.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+        BufferedReader graphApiReader = new BufferedReader(new InputStreamReader(graphApiConnection.getInputStream()));
+        String graphApiResponse;
+        while ((graphApiResponse = graphApiReader.readLine()) != null) {
+            System.out.println(graphApiResponse);
+        }
+        graphApiReader.close();
+    }
+}
